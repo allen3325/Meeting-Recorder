@@ -7,7 +7,7 @@ conversation.
 ## Requirements
 
 - Python 3.8+
-- `flask`, `openai`, and `python-dotenv` packages
+- `flask`, `python-dotenv`, and `openai>=1.0` packages
 - For local speech recognition:
   - `transformers` and `torch` for GPU/CPU
   - `mlx-whisper` when running on Apple&nbsp;Silicon (MPS)
@@ -24,7 +24,7 @@ STT_MODE=online  # or "local"
 Then install the dependencies and start the server:
 
 ```bash
-pip install flask openai python-dotenv transformers torch mlx-whisper
+pip install "openai>=1.0" flask python-dotenv transformers torch mlx-whisper
 python app/server.py
 ```
 
