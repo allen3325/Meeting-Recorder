@@ -154,5 +154,27 @@ def summarize():
 
     return jsonify({'summary': summary_text})
 
+
+@app.route('/history')
+def history():
+    """Return all transcripts with their summaries."""
+    entries = []
+    transcript_files = [
+        (f, os.path.getmtime(os.path.join(TRANSCRIPTS_DIR, f)))
+        for f in os.listdir(TRANSCRIPTS_DIR)
+        if f.endswith('.txt')
+    ]
+    for fname, _ in sorted(transcript_files, key=lambda x: x[1]):
+        transcript_id = os.path.splitext(fname)[0]
+        with open(os.path.join(TRANSCRIPTS_DIR, fname), 'r', encoding='utf-8') as t_f:
+            text = t_f.read()
+        summary_path = os.path.join(SUMMARIES_DIR, f"{transcript_id}.txt")
+        summary = ''
+        if os.path.exists(summary_path):
+            with open(summary_path, 'r', encoding='utf-8') as s_f:
+                summary = s_f.read()
+        entries.append({'id': transcript_id, 'text': text, 'summary': summary})
+    return jsonify({'history': entries})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=4000, debug=True)
