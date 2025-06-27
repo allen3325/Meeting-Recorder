@@ -16,6 +16,11 @@
 <button id="recordButton">Start Recording</button>
 <canvas id="visualizer" width="600" height="100"></canvas>
 <pre id="transcript"></pre>
+<label for="modelSelect" style="display:none;" id="modelLabel">Model:</label>
+<select id="modelSelect" style="display:none;">
+  <option value="openai">OpenAI</option>
+  <option value="gemini">Gemini</option>
+</select>
 <button id="summarizeButton" style="display:none;">Summarize</button>
 <pre id="summary"></pre>
 <div id="error" style="color:red"></div>
@@ -47,6 +52,8 @@ function hideLoading() {
   clearInterval(loadingInterval);
   loadingDiv.style.display = 'none';
 }
+const modelSelect = document.getElementById('modelSelect');
+const modelLabel = document.getElementById('modelLabel');
 
 recordButton.onclick = async () => {
   const errorDiv = document.getElementById('error');
@@ -115,6 +122,8 @@ recordButton.onclick = async () => {
       transcriptPre.textContent = data.text;
       transcriptId = data.transcript_id;
       summarizeButton.style.display = 'inline';
+      modelSelect.style.display = 'inline';
+      modelLabel.style.display = 'inline';
     };
   }
 };
@@ -124,7 +133,7 @@ summarizeButton.onclick = async () => {
   const response = await fetch('/summarize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ transcript_id: transcriptId })
+    body: JSON.stringify({ transcript_id: transcriptId, model: modelSelect.value })
   });
   const data = await response.json();
   hideLoading();
