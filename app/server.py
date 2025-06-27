@@ -8,8 +8,10 @@ load_dotenv()
 
 try:
     import openai
-except ImportError:
+    client = openai.OpenAI()
+except Exception:  # noqa: BLE001
     openai = None  # placeholder if openai package not installed
+    client = None
 
 app = Flask(__name__)
 
@@ -77,14 +79,14 @@ def transcribe():
     if STT_MODE == 'local':
         transcript_text = local_transcribe(audio_path)
     else:
-        if openai is None:
+        if client is None:
             transcript_text = "[OpenAI package not installed. Unable to transcribe.]"
         else:
             with open(audio_path, 'rb') as f:
                 try:
-                    response = openai.Audio.transcribe('whisper-1', f)
-                    transcript_text = response['text']
-                except Exception as e:
+                    response = client.audio.transcriptions.create(model='whisper-1', file=f)
+                    transcript_text = response.text
+                except Exception as e:  # noqa: BLE001
                     transcript_text = f"[Transcription error: {e}]"
 
     os.remove(audio_path)
@@ -111,19 +113,19 @@ def summarize():
         transcript_text = t_file.read()
 
     summary_text = ""
-    if openai is None:
+    if client is None:
         summary_text = "[OpenAI package not installed. Unable to summarize.]"
     else:
         try:
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model='gpt-4.1-nano',
                 messages=[
                     {'role': 'system', 'content': 'Summarize the following meeting transcript.'},
                     {'role': 'user', 'content': transcript_text}
                 ]
             )
-            summary_text = response['choices'][0]['message']['content']
-        except Exception as e:
+            summary_text = response.choices[0].message.content
+        except Exception as e:  # noqa: BLE001
             summary_text = f"[Summarization error: {e}]"
 
     summary_path = os.path.join(SUMMARIES_DIR, f"{transcript_id}.txt")
