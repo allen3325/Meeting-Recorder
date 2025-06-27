@@ -7,13 +7,24 @@ conversation.
 ## Requirements
 
 - Python 3.8+
-- `flask` and `openai` Python packages
-- A valid OpenAI API key exported as `OPENAI_API_KEY`
+- `flask`, `openai`, and `python-dotenv` packages
+- For local speech recognition:
+  - `transformers` and `torch` for GPU/CPU
+  - `mlx-whisper` when running on Apple&nbsp;Silicon (MPS)
+- A valid OpenAI API key exported as `OPENAI_API_KEY` (only required when using online STT or summarization)
 
 ## Running the server
 
+Create a `.env` file in the project root to choose the speech-to-text backend:
+
 ```bash
-pip install flask openai
+STT_MODE=online  # or "local"
+```
+
+Then install the dependencies and start the server:
+
+```bash
+pip install flask openai python-dotenv transformers torch mlx-whisper
 python app/server.py
 ```
 
