@@ -41,8 +41,16 @@ folders respectively. Temporary audio files are deleted after transcription.
 
 ## Frontend
 
-Open `http://localhost:5000` in a browser (served by the Flask app). Press
+Open `http://localhost:4000` in a browser (served by the Flask app). Press
 **Start Recording** to record microphone audio. After stopping, the transcript
 will appear along with a drop-down to choose **OpenAI** or **Gemini** for
 summarization. Pick a model and then press **Summarize** to generate the
 summary.
+
+## Additional Features
+
+- **History View**: Access previous recordings and summaries via the sidebar
+- **Real-time Visualization**: Audio waveform display during recording
+- **Dual STT Options**: Choose between online (OpenAI Whisper) or local models
+- **Apple Silicon Optimization**: Uses MLX-Whisper for faster local transcription on M1/M2 Macs
+- **Traditional Chinese Summaries**: AI-generated summaries in Traditional Chinese

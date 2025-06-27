@@ -4,30 +4,564 @@
 <meta charset="UTF-8">
 <title>Meeting Recorder</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  #recordButton { padding: 10px 20px; font-size: 16px; }
-  #transcript { margin-top: 20px; white-space: pre-wrap; }
-  canvas { border: 1px solid #ccc; display: block; margin-top: 10px; }
-  #loading { font-style: italic; margin-top: 10px; }
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    color: #333;
+    display: flex;
+  }
+
+  .app-container {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 300px;
+    height: fit-content;
+    max-height: 80vh;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: width 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    margin: 20px 0 20px 20px;
+    border-radius: 20px;
+  }
+
+  .sidebar.collapsed {
+    width: 50px;
+  }
+
+  .sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .sidebar-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+  }
+
+  .sidebar-toggle {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #667eea;
+    padding: 5px;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+  }
+
+  .sidebar-toggle:hover {
+    background-color: #f8f9fa;
+  }
+
+  .sidebar-content {
+    flex: 1;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(80vh - 80px);
+  }
+
+  .container {
+    max-width: 800px;
+    width: 100%;
+    margin: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    height: fit-content;
+  }
+
+  h1 {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+    font-weight: 300;
+  }
+
+  .recording-section {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  #recordButton {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 18px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    font-weight: 500;
+  }
+
+  #recordButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
+  }
+
+  #recordButton:active {
+    transform: translateY(0);
+  }
+
+  canvas {
+    border: 2px solid #e0e0e0;
+    border-radius: 15px;
+    margin: 20px auto;
+    display: block;
+    background: #f8f9fa;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+
+  #modelSelect {
+    padding: 10px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    background: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+  }
+
+  #modelSelect:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+
+  #summarizeButton {
+    background: linear-gradient(45deg, #36d1dc, #5b86e5);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(54, 209, 220, 0.3);
+  }
+
+  #summarizeButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(54, 209, 220, 0.4);
+  }
+
+  .output-section {
+    margin: 20px 0;
+  }
+
+  .output-label {
+    color: #2c3e50;
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-bottom: 10px;
+    padding-left: 5px;
+    border-left: 4px solid #667eea;
+    padding-left: 15px;
+  }
+
+  #transcript, #summary {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 15px;
+    padding: 20px;
+    margin: 0;
+    white-space: pre-wrap;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100px;
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  #loading {
+    display: none;
+    text-align: center;
+    margin: 30px 0;
+    padding: 25px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 20px;
+    border: 2px solid #e9ecef;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  .loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e9ecef;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .loading-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+  }
+
+  .loading-subtext {
+    font-size: 14px;
+    color: #6c757d;
+    margin: 0;
+    font-style: italic;
+  }
+
+  .loading-dots {
+    display: flex;
+    gap: 4px;
+    margin-top: 10px;
+  }
+
+  .loading-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #667eea;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .loading-dot:nth-child(1) { animation-delay: 0s; }
+  .loading-dot:nth-child(2) { animation-delay: 0.3s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.6s; }
+
+  @keyframes pulse {
+    0%, 60%, 100% {
+      transform: scale(1);
+      opacity: 0.7;
+    }
+    30% {
+      transform: scale(1.3);
+      opacity: 1;
+    }
+  }
+
+  #error {
+    color: #e74c3c;
+    background: #ffeaea;
+    border: 2px solid #ffc5c5;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 15px 0;
+    font-weight: 500;
+    display: none;
+  }
+
+  #error:not(:empty) {
+    display: block;
+  }
+
+  /* Sidebar history styles */
+  .history-item {
+    padding: 15px;
+    border-bottom: 1px solid #e9ecef;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .history-item:hover {
+    background-color: #f8f9fa;
+  }
+
+  .history-item.active {
+    background-color: #e3f2fd;
+    border-left: 4px solid #667eea;
+  }
+
+  .history-item-preview {
+    font-size: 14px;
+    color: #2c3e50;
+    font-weight: 500;
+    margin-bottom: 5px;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .history-item-date {
+    font-size: 12px;
+    color: #6c757d;
+  }
+
+  .sidebar.collapsed .history-item-preview,
+  .sidebar.collapsed .history-item-date,
+  .sidebar.collapsed .sidebar-title {
+    display: none;
+  }
+
+  .sidebar.collapsed .history-item {
+    padding: 10px 15px;
+    text-align: center;
+  }
+
+  .main-content {
+    flex: 1;
+    padding: 0;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+
+  .sidebar .content-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 0;
+    padding: 15px;
+    border-bottom: 1px solid #e9ecef;
+    flex-shrink: 0;
+  }
+
+  .refresh-button {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);
+  }
+
+  .refresh-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+  }
+
+  .selected-content {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 20px;
+    margin-top: 20px;
+    border: 2px solid #e9ecef;
+  }
+
+  .selected-content h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+  }
+
+  .selected-content-section {
+    margin-bottom: 20px;
+  }
+
+  .selected-content-label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 14px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .selected-content-text {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    line-height: 1.6;
+    font-size: 14px;
+    color: #2c3e50;
+    white-space: pre-wrap;
+  }
+
+  #historyList {
+    flex: 1;
+    overflow-y: auto;
+    max-height: calc(80vh - 140px);
+  }
+
+  #historyList::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  #historyList::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+
+  #historyList::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+  }
+
+  #historyList::-webkit-scrollbar-thumb:hover {
+    background: #5a6fd8;
+  }
+
+  @media (max-width: 768px) {
+    .app-container {
+      flex-direction: column;
+    }
+
+    .sidebar {
+      width: 100%;
+      height: 200px;
+      order: 2;
+    }
+
+    .sidebar.collapsed {
+      height: 60px;
+      width: 100%;
+    }
+
+    .sidebar-content {
+      height: calc(200px - 80px);
+    }
+
+    .container {
+      margin: 10px;
+      padding: 20px;
+      order: 1;
+      max-width: none;
+    }
+
+    .main-content {
+      justify-content: stretch;
+    }
+
+    h1 {
+      font-size: 2em;
+    }
+
+    .controls {
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #recordButton {
+      padding: 12px 25px;
+      font-size: 16px;
+    }
+
+    canvas {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .main-content {
+      padding: 10px;
+    }
+  }
 </style>
 </head>
 <body>
-<h1>Meeting Recorder</h1>
-<button id="recordButton">Start Recording</button>
-<canvas id="visualizer" width="600" height="100"></canvas>
-<pre id="transcript"></pre>
-<label for="modelSelect" style="display:none;" id="modelLabel">Model:</label>
-<select id="modelSelect" style="display:none;">
-  <option value="openai">OpenAI</option>
-  <option value="gemini">Gemini</option>
-</select>
-<button id="summarizeButton" style="display:none;">Summarize</button>
-<pre id="summary"></pre>
-<div id="error" style="color:red"></div>
-<div id="loading" style="display:none;"></div>
-<h2>History</h2>
-<button id="refreshHistory">Refresh History</button>
-<ul id="historyList"></ul>
+<div class="app-container">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h3 class="sidebar-title">Chat History</h3>
+      <button class="sidebar-toggle" onclick="toggleSidebar()" id="sidebarToggle">‹</button>
+    </div>
+    <div class="sidebar-content" id="sidebarContent">
+      <div class="content-header">
+        <button class="refresh-button" onclick="loadHistory()">Refresh</button>
+      </div>
+      <div id="historyList"></div>
+    </div>
+  </div>
+  
+  <div class="main-content">
+    <div class="container">
+      <h1>Meeting Recorder</h1>
+      
+      <div class="recording-section">
+        <button id="recordButton">Start Recording</button>
+        <canvas id="visualizer" width="600" height="100"></canvas>
+      </div>
+      
+      <div class="controls">
+        <label for="modelSelect" style="display:none;" id="modelLabel">Model:</label>
+        <select id="modelSelect" style="display:none;">
+          <option value="openai">OpenAI</option>
+          <option value="gemini">Gemini</option>
+        </select>
+        <button id="summarizeButton" style="display:none;">Summarize</button>
+      </div>
+      
+      <div id="loading" style="display:none;"></div>
+      
+      <div class="output-section">
+        <h3 class="output-label">Transcript</h3>
+        <pre id="transcript" placeholder="Your transcript will appear here..."></pre>
+      </div>
+      
+      <div class="output-section">
+        <h3 class="output-label">Summary</h3>
+        <pre id="summary" placeholder="Summary will appear here..."></pre>
+      </div>
+      
+      <div id="error"></div>
+      
+      <div class="selected-content" id="selectedContent" style="display:none;">
+        <h3 id="selectedTitle">Selected Chat</h3>
+        <div class="selected-content-section">
+          <div class="selected-content-label">Transcript</div>
+          <div class="selected-content-text" id="selectedTranscript"></div>
+        </div>
+        <div class="selected-content-section">
+          <div class="selected-content-label">Summary</div>
+          <div class="selected-content-text" id="selectedSummary"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
 let mediaRecorder;
 let audioChunks = [];
@@ -41,37 +575,112 @@ const summaryPre = document.getElementById('summary');
 const loadingDiv = document.getElementById('loading');
 let loadingInterval;
 
-function showLoading(message) {
-  let dots = 0;
+function showLoading(message, subtext = '') {
+  const loadingMessages = {
+    'Transcribing': {
+      main: 'Converting Speech to Text',
+      sub: 'Please wait while we process your audio...'
+    },
+    'Summarizing': {
+      main: 'Generating Summary',
+      sub: 'AI is analyzing your content...'
+    }
+  };
+  
+  const messageData = loadingMessages[message] || { main: message, sub: subtext };
+  
+  loadingDiv.innerHTML = `
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">${messageData.main}</div>
+      <div class="loading-subtext">${messageData.sub}</div>
+      <div class="loading-dots">
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+      </div>
+    </div>
+  `;
   loadingDiv.style.display = 'block';
-  loadingDiv.textContent = message;
-  loadingInterval = setInterval(() => {
-    dots = (dots + 1) % 4;
-    loadingDiv.textContent = message + '.'.repeat(dots);
-  }, 500);
 }
 
 function hideLoading() {
-  clearInterval(loadingInterval);
   loadingDiv.style.display = 'none';
+  loadingDiv.innerHTML = '';
 }
 const modelSelect = document.getElementById('modelSelect');
 const modelLabel = document.getElementById('modelLabel');
 const historyList = document.getElementById('historyList');
-const refreshHistoryButton = document.getElementById('refreshHistory');
+let selectedHistoryItem = null;
 
 async function loadHistory() {
-  const response = await fetch('/history');
-  const data = await response.json();
-  historyList.innerHTML = '';
-  data.history.forEach(item => {
-    const li = document.createElement('li');
-    li.innerHTML = `<strong>${item.id}</strong><br><em>Transcript:</em> ${item.text}<br><em>Summary:</em> ${item.summary}`;
-    historyList.appendChild(li);
-  });
+  try {
+    const response = await fetch('/history');
+    const data = await response.json();
+    historyList.innerHTML = '';
+    
+    // Backend returns history sorted by file modification time (oldest first)
+    // Reverse the array to show newest first
+    const sortedHistory = data.history.reverse();
+    
+    sortedHistory.forEach(item => {
+      const historyItem = document.createElement('div');
+      historyItem.className = 'history-item';
+      historyItem.dataset.id = item.id;
+      
+      // Truncate summary for preview (first 50 characters)
+      const summaryPreview = item.summary ? item.summary.substring(0, 50) + (item.summary.length > 50 ? '...' : '') : 'No summary';
+      
+      historyItem.innerHTML = `
+        <div class="history-item-preview">${summaryPreview}</div>
+        <div class="history-item-date">#${item.id}</div>
+      `;
+      
+      historyItem.onclick = () => selectHistoryItem(item, historyItem);
+      historyList.appendChild(historyItem);
+    });
+  } catch (error) {
+    console.error('Failed to load history:', error);
+  }
 }
 
-refreshHistoryButton.onclick = loadHistory;
+function selectHistoryItem(item, element) {
+  // Remove active class from all items
+  document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
+  
+  // Add active class to selected item
+  element.classList.add('active');
+  selectedHistoryItem = item;
+  
+  // Show selected content
+  const selectedContent = document.getElementById('selectedContent');
+  const selectedTitle = document.getElementById('selectedTitle');
+  const selectedTranscript = document.getElementById('selectedTranscript');
+  const selectedSummary = document.getElementById('selectedSummary');
+  
+  selectedTitle.textContent = `Chat #${item.id}`;
+  selectedTranscript.textContent = item.text || 'No transcript available';
+  selectedSummary.textContent = item.summary || 'No summary available';
+  selectedContent.style.display = 'block';
+}
+
+let sidebarCollapsed = false;
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const toggleButton = document.getElementById('sidebarToggle');
+  
+  sidebarCollapsed = !sidebarCollapsed;
+  
+  if (sidebarCollapsed) {
+    sidebar.classList.add('collapsed');
+    toggleButton.textContent = '›';
+  } else {
+    sidebar.classList.remove('collapsed');
+    toggleButton.textContent = '‹';
+  }
+}
+
 window.addEventListener('load', loadHistory);
 
 recordButton.onclick = async () => {
