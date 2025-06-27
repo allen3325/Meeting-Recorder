@@ -1,0 +1,10 @@
+body { font-family: sans-serif; }
+.hidden { display: none; }
+#recordingIndicator {
+  color: red;
+  animation: blink 1s steps(5, start) infinite;
+}
+@keyframes blink {
+  to { visibility: hidden; }
+}
+pre { background: #f0f0f0; padding: 1em; }
