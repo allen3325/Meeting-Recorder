@@ -7,7 +7,7 @@ conversation.
 ## Requirements
 
 - Python 3.8+
-- `flask`, `openai`, `python-dotenv`, and `google-generativeai` packages
+- `flask`, `openai>=1.0`, `python-dotenv`, and `google-generativeai` packages
 - For local speech recognition:
   - `transformers` and `torch` for GPU/CPU
   - `mlx-whisper` when running on Apple&nbsp;Silicon (MPS)

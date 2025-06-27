@@ -8,8 +8,10 @@ load_dotenv()
 
 try:
     import openai
-except ImportError:
+    client = openai.OpenAI()
+except Exception:  # noqa: BLE001
     openai = None  # placeholder if openai package not installed
+    client = None
 
 try:
     import google.generativeai as genai
@@ -39,9 +41,8 @@ def local_transcribe(audio_path: str) -> str:
     # Prefer MPS with mlx-whisper when available
     if torch and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         try:
-            from mlx_whisper import load_models, transcribe
-            model = load_models.load_model("large-v3-turbo")
-            result = transcribe(model, audio_path)
+            from mlx_whisper import transcribe
+            result = transcribe(audio_path, path_or_hf_repo="mlx-community/whisper-large-v3-turbo")
             return result.get("text", "")
         except Exception as e:  # noqa: BLE001
             return f"[Local MPS transcription error: {e}]"
@@ -82,14 +83,14 @@ def transcribe():
     if STT_MODE == 'local':
         transcript_text = local_transcribe(audio_path)
     else:
-        if openai is None:
+        if client is None:
             transcript_text = "[OpenAI package not installed. Unable to transcribe.]"
         else:
             with open(audio_path, 'rb') as f:
                 try:
-                    response = openai.Audio.transcribe('whisper-1', f)
-                    transcript_text = response['text']
-                except Exception as e:
+                    response = client.audio.transcriptions.create(model='whisper-1', file=f)
+                    transcript_text = response.text
+                except Exception as e:  # noqa: BLE001
                     transcript_text = f"[Transcription error: {e}]"
 
     os.remove(audio_path)
