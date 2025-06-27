@@ -42,7 +42,7 @@ def local_transcribe(audio_path: str) -> str:
     if torch and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         try:
             from mlx_whisper import transcribe
-            result = transcribe(audio_path, path_or_hf_repo="mlx-community/whisper-large-v3-turbo")
+            result = transcribe(audio_path, path_or_hf_repo="mlx-community/whisper-large-v3-turbo", language="zh")
             return result.get("text", "")
         except Exception as e:  # noqa: BLE001
             return f"[Local MPS transcription error: {e}]"
