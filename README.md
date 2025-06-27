@@ -1,5 +1,8 @@
 # GPT Demo Meeting Recorder
 
+[![video](https://github.com/user-attachments/assets/83bc0392-9400-4a24-979d-89914a48bebe)](https://youtu.be/TW4HDj0AEe0)
+Click the banner above to watch the demo video.
+
 This project provides a minimal example of recording audio in the browser,
 transcribing it with a speech-to-text model and letting LLM summarize the
 conversation.
@@ -7,6 +10,7 @@ conversation.
 ## Requirements
 
 - Python 3.8+
+
 - `flask`, `openai>=1.0`, `python-dotenv`, and `google-generativeai` packages
 - For local speech recognition:
   - `transformers` and `torch` for GPU/CPU
