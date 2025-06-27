@@ -1,7 +1,7 @@
 # GPT Demo Meeting Recorder
 
 This project provides a minimal example of recording audio in the browser,
-transcribing it with a speech-to-text model and letting GPT summarize the
+transcribing it with a speech-to-text model and letting LLM summarize the
 conversation.
 
 ## Requirements
