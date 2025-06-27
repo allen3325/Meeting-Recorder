@@ -1,0 +1,19 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 2em;
+}
+#controls button {
+  margin-right: 0.5em;
+}
+#recordingIndicator {
+  color: red;
+  font-weight: bold;
+  margin-top: 1em;
+}
+.hidden {
+  display: none;
+}
+pre {
+  background: #f0f0f0;
+  padding: 1em;
+}
