@@ -127,7 +127,7 @@ def summarize():
                 genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
                 model = genai.GenerativeModel('gemini-pro')
                 response = model.generate_content(
-                    f"Summarize the following meeting transcript:\n{transcript_text}"
+                    f"Summarize the following meeting transcript.\n1. return in Traditional Chinese.\nmeeting transcript: {transcript_text}"
                 )
                 summary_text = response.text
             except Exception as e:
