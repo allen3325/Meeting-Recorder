@@ -140,7 +140,7 @@ def summarize():
                 response = openai.ChatCompletion.create(
                     model='gpt-4.1-nano',
                     messages=[
-                        {'role': 'system', 'content': 'Summarize the following meeting transcript.'},
+                        {'role': 'system', 'content': 'Summarize the following meeting transcript.\n1. return in Traditional Chinese.'},
                         {'role': 'user', 'content': transcript_text}
                     ]
                 )
