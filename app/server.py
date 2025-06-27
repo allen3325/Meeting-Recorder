@@ -125,7 +125,7 @@ def summarize():
         else:
             try:
                 genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
-                model = genai.GenerativeModel('gemini-pro')
+                model = genai.GenerativeModel('gemini-2.5-flash-lite-preview-06-17')
                 response = model.generate_content(
                     f"Summarize the following meeting transcript.\n1. return in Traditional Chinese.\nmeeting transcript: {transcript_text}"
                 )
@@ -137,14 +137,14 @@ def summarize():
             summary_text = "[OpenAI package not installed. Unable to summarize.]"
         else:
             try:
-                response = openai.ChatCompletion.create(
+                response = client.chat.completions.create(
                     model='gpt-4.1-nano',
                     messages=[
                         {'role': 'system', 'content': 'Summarize the following meeting transcript.\n1. return in Traditional Chinese.'},
                         {'role': 'user', 'content': transcript_text}
                     ]
                 )
-                summary_text = response['choices'][0]['message']['content']
+                summary_text = response.choices[0].message.content
             except Exception as e:
                 summary_text = f"[Summarization error: {e}]"
 
@@ -155,4 +155,4 @@ def summarize():
     return jsonify({'summary': summary_text})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=4000, debug=True)
