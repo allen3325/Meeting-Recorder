@@ -1,0 +1,7 @@
+flask
+openai
+python-dotenv
+google-generativeai
+transformers
+torch
+mlx-whisper

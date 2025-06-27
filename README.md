@@ -7,11 +7,12 @@ conversation.
 ## Requirements
 
 - Python 3.8+
-- `flask`, `openai`, and `python-dotenv` packages
+- `flask`, `openai`, `python-dotenv`, and `google-generativeai` packages
 - For local speech recognition:
   - `transformers` and `torch` for GPU/CPU
   - `mlx-whisper` when running on Apple&nbsp;Silicon (MPS)
-- A valid OpenAI API key exported as `OPENAI_API_KEY` (only required when using online STT or summarization)
+- A valid OpenAI API key exported as `OPENAI_API_KEY` (only required when using OpenAI STT or summarization)
+- A Google API key exported as `GOOGLE_API_KEY` if using Gemini summarization
 
 ## Running the server
 
@@ -24,7 +25,7 @@ STT_MODE=online  # or "local"
 Then install the dependencies and start the server:
 
 ```bash
-pip install flask openai python-dotenv transformers torch mlx-whisper
+pip install -r requirements.txt
 python app/server.py
 ```
 
@@ -42,4 +43,6 @@ folders respectively. Temporary audio files are deleted after transcription.
 
 Open `http://localhost:5000` in a browser (served by the Flask app). Press
 **Start Recording** to record microphone audio. After stopping, the transcript
-will appear and you can press **Summarize** to let GPT produce a summary.
+will appear along with a drop-down to choose **OpenAI** or **Gemini** for
+summarization. Pick a model and then press **Summarize** to generate the
+summary.

@@ -11,6 +11,11 @@ try:
 except ImportError:
     openai = None  # placeholder if openai package not installed
 
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None  # placeholder if google-generativeai package not installed
+
 app = Flask(__name__)
 
 TRANSCRIPTS_DIR = os.path.join(os.path.dirname(__file__), '..', 'transcripts')
@@ -100,6 +105,7 @@ def transcribe():
 def summarize():
     data = request.get_json(force=True)
     transcript_id = data.get('transcript_id')
+    model_choice = data.get('model', 'openai').lower()
     if not transcript_id:
         return jsonify({'error': 'transcript_id is required'}), 400
 
@@ -111,20 +117,35 @@ def summarize():
         transcript_text = t_file.read()
 
     summary_text = ""
-    if openai is None:
-        summary_text = "[OpenAI package not installed. Unable to summarize.]"
+
+    if model_choice == 'gemini':
+        if genai is None:
+            summary_text = "[google-generativeai package not installed. Unable to summarize.]"
+        else:
+            try:
+                genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
+                model = genai.GenerativeModel('gemini-pro')
+                response = model.generate_content(
+                    f"Summarize the following meeting transcript:\n{transcript_text}"
+                )
+                summary_text = response.text
+            except Exception as e:
+                summary_text = f"[Gemini summarization error: {e}]"
     else:
-        try:
-            response = openai.ChatCompletion.create(
-                model='gpt-4.1-nano',
-                messages=[
-                    {'role': 'system', 'content': 'Summarize the following meeting transcript.'},
-                    {'role': 'user', 'content': transcript_text}
-                ]
-            )
-            summary_text = response['choices'][0]['message']['content']
-        except Exception as e:
-            summary_text = f"[Summarization error: {e}]"
+        if openai is None:
+            summary_text = "[OpenAI package not installed. Unable to summarize.]"
+        else:
+            try:
+                response = openai.ChatCompletion.create(
+                    model='gpt-4.1-nano',
+                    messages=[
+                        {'role': 'system', 'content': 'Summarize the following meeting transcript.'},
+                        {'role': 'user', 'content': transcript_text}
+                    ]
+                )
+                summary_text = response['choices'][0]['message']['content']
+            except Exception as e:
+                summary_text = f"[Summarization error: {e}]"
 
     summary_path = os.path.join(SUMMARIES_DIR, f"{transcript_id}.txt")
     with open(summary_path, 'w', encoding='utf-8') as s_file:
