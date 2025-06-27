@@ -2,6 +2,10 @@ import os
 import uuid
 from flask import Flask, request, jsonify, send_from_directory
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 try:
     import openai
 except ImportError:
@@ -16,6 +20,40 @@ FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend')
 os.makedirs(TRANSCRIPTS_DIR, exist_ok=True)
 os.makedirs(SUMMARIES_DIR, exist_ok=True)
 os.makedirs('tmp', exist_ok=True)
+
+STT_MODE = os.getenv('STT_MODE', 'online').lower()
+
+
+def local_transcribe(audio_path: str) -> str:
+    """Transcribe audio using a local Whisper model."""
+    try:
+        import torch
+    except ImportError:
+        torch = None
+
+    # Prefer MPS with mlx-whisper when available
+    if torch and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        try:
+            from mlx_whisper import load_models, transcribe
+            model = load_models.load_model("large-v3-turbo")
+            result = transcribe(model, audio_path)
+            return result.get("text", "")
+        except Exception as e:  # noqa: BLE001
+            return f"[Local MPS transcription error: {e}]"
+
+    # Default to Hugging Face pipeline (supports GPU/CPU)
+    try:
+        from transformers import pipeline
+        device = 0 if torch and torch.cuda.is_available() else -1
+        asr = pipeline(
+            "automatic-speech-recognition",
+            model="openai/whisper-large-v3-turbo",
+            device=device,
+        )
+        result = asr(audio_path)
+        return result.get("text", "")
+    except Exception as e:  # noqa: BLE001
+        return f"[Local transcription error: {e}]"
 
 
 @app.route('/')
@@ -36,15 +74,18 @@ def transcribe():
     audio_file.save(audio_path)
 
     transcript_text = ""
-    if openai is None:
-        transcript_text = "[OpenAI package not installed. Unable to transcribe.]"
+    if STT_MODE == 'local':
+        transcript_text = local_transcribe(audio_path)
     else:
-        with open(audio_path, 'rb') as f:
-            try:
-                response = openai.Audio.transcribe('whisper-1', f)
-                transcript_text = response['text']
-            except Exception as e:
-                transcript_text = f"[Transcription error: {e}]"
+        if openai is None:
+            transcript_text = "[OpenAI package not installed. Unable to transcribe.]"
+        else:
+            with open(audio_path, 'rb') as f:
+                try:
+                    response = openai.Audio.transcribe('whisper-1', f)
+                    transcript_text = response['text']
+                except Exception as e:
+                    transcript_text = f"[Transcription error: {e}]"
 
     os.remove(audio_path)
 
