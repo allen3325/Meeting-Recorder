@@ -8,6 +8,7 @@
   #recordButton { padding: 10px 20px; font-size: 16px; }
   #transcript { margin-top: 20px; white-space: pre-wrap; }
   canvas { border: 1px solid #ccc; display: block; margin-top: 10px; }
+  #loading { font-style: italic; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -18,6 +19,7 @@
 <button id="summarizeButton" style="display:none;">Summarize</button>
 <pre id="summary"></pre>
 <div id="error" style="color:red"></div>
+<div id="loading" style="display:none;"></div>
 <script>
 let mediaRecorder;
 let audioChunks = [];
@@ -28,6 +30,23 @@ const recordButton = document.getElementById('recordButton');
 const summarizeButton = document.getElementById('summarizeButton');
 const transcriptPre = document.getElementById('transcript');
 const summaryPre = document.getElementById('summary');
+const loadingDiv = document.getElementById('loading');
+let loadingInterval;
+
+function showLoading(message) {
+  let dots = 0;
+  loadingDiv.style.display = 'block';
+  loadingDiv.textContent = message;
+  loadingInterval = setInterval(() => {
+    dots = (dots + 1) % 4;
+    loadingDiv.textContent = message + '.'.repeat(dots);
+  }, 500);
+}
+
+function hideLoading() {
+  clearInterval(loadingInterval);
+  loadingDiv.style.display = 'none';
+}
 
 recordButton.onclick = async () => {
   const errorDiv = document.getElementById('error');
@@ -89,8 +108,10 @@ recordButton.onclick = async () => {
       const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.wav');
+      showLoading('Transcribing');
       const response = await fetch('/transcribe', { method: 'POST', body: formData });
       const data = await response.json();
+      hideLoading();
       transcriptPre.textContent = data.text;
       transcriptId = data.transcript_id;
       summarizeButton.style.display = 'inline';
@@ -99,12 +120,14 @@ recordButton.onclick = async () => {
 };
 
 summarizeButton.onclick = async () => {
+  showLoading('Summarizing');
   const response = await fetch('/summarize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ transcript_id: transcriptId })
   });
   const data = await response.json();
+  hideLoading();
   summaryPre.textContent = data.summary;
 };
 </script>
