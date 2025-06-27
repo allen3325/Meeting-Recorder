@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Meeting Recorder</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  #recordButton { padding: 10px 20px; font-size: 16px; }
+  #transcript { margin-top: 20px; white-space: pre-wrap; }
+  canvas { border: 1px solid #ccc; display: block; margin-top: 10px; }
+</style>
+</head>
+<body>
+<h1>Meeting Recorder</h1>
+<button id="recordButton">Start Recording</button>
+<canvas id="visualizer" width="600" height="100"></canvas>
+<pre id="transcript"></pre>
+<button id="summarizeButton" style="display:none;">Summarize</button>
+<pre id="summary"></pre>
+<div id="error" style="color:red"></div>
+<script>
+let mediaRecorder;
+let audioChunks = [];
+let recording = false;
+let transcriptId = null;
+
+const recordButton = document.getElementById('recordButton');
+const summarizeButton = document.getElementById('summarizeButton');
+const transcriptPre = document.getElementById('transcript');
+const summaryPre = document.getElementById('summary');
+
+recordButton.onclick = async () => {
+  const errorDiv = document.getElementById('error');
+  errorDiv.textContent = '';
+  if (!recording) {
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      errorDiv.textContent = 'Failed to access microphone: ' + err.message;
+      return;
+    }
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioContext.createMediaStreamSource(stream);
+    const analyser = audioContext.createAnalyser();
+    source.connect(analyser);
+    const canvas = document.getElementById('visualizer');
+    const canvasCtx = canvas.getContext('2d');
+    analyser.fftSize = 2048;
+    const bufferLength = analyser.fftSize;
+    const dataArray = new Uint8Array(bufferLength);
+
+    function draw() {
+      requestAnimationFrame(draw);
+      analyser.getByteTimeDomainData(dataArray);
+      canvasCtx.fillStyle = 'rgb(200, 200, 200)';
+      canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+      canvasCtx.lineWidth = 2;
+      canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
+      canvasCtx.beginPath();
+      const sliceWidth = canvas.width * 1.0 / bufferLength;
+      let x = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = v * canvas.height/2;
+        if (i === 0) {
+          canvasCtx.moveTo(x, y);
+        } else {
+          canvasCtx.lineTo(x, y);
+        }
+        x += sliceWidth;
+      }
+      canvasCtx.lineTo(canvas.width, canvas.height/2);
+      canvasCtx.stroke();
+    }
+    draw();
+
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.start();
+    recordButton.textContent = 'Stop Recording';
+    recording = true;
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+  } else {
+    mediaRecorder.stop();
+    recordButton.textContent = 'Start Recording';
+    recording = false;
+    mediaRecorder.onstop = async () => {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.wav');
+      const response = await fetch('/transcribe', { method: 'POST', body: formData });
+      const data = await response.json();
+      transcriptPre.textContent = data.text;
+      transcriptId = data.transcript_id;
+      summarizeButton.style.display = 'inline';
+    };
+  }
+};
+
+summarizeButton.onclick = async () => {
+  const response = await fetch('/summarize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ transcript_id: transcriptId })
+  });
+  const data = await response.json();
+  summaryPre.textContent = data.summary;
+};
+</script>
+</body>
+</html>
