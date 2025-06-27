@@ -25,6 +25,9 @@
 <pre id="summary"></pre>
 <div id="error" style="color:red"></div>
 <div id="loading" style="display:none;"></div>
+<h2>History</h2>
+<button id="refreshHistory">Refresh History</button>
+<ul id="historyList"></ul>
 <script>
 let mediaRecorder;
 let audioChunks = [];
@@ -54,6 +57,22 @@ function hideLoading() {
 }
 const modelSelect = document.getElementById('modelSelect');
 const modelLabel = document.getElementById('modelLabel');
+const historyList = document.getElementById('historyList');
+const refreshHistoryButton = document.getElementById('refreshHistory');
+
+async function loadHistory() {
+  const response = await fetch('/history');
+  const data = await response.json();
+  historyList.innerHTML = '';
+  data.history.forEach(item => {
+    const li = document.createElement('li');
+    li.innerHTML = `<strong>${item.id}</strong><br><em>Transcript:</em> ${item.text}<br><em>Summary:</em> ${item.summary}`;
+    historyList.appendChild(li);
+  });
+}
+
+refreshHistoryButton.onclick = loadHistory;
+window.addEventListener('load', loadHistory);
 
 recordButton.onclick = async () => {
   const errorDiv = document.getElementById('error');
